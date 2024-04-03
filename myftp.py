@@ -12,37 +12,53 @@ def get_resp(socket):
     return socket.recv(1024).decode()
 
 def ascii():
-    send_cmd(client_socket, "TYPE A")
-    print(get_resp(client_socket), end="")
+    try:
+        send_cmd(client_socket, "TYPE A")
+        print(get_resp(client_socket), end="")
+    except:
+        print("Not connected.")
 
 def binary():
-    send_cmd(client_socket, "TYPE I")
-    print(get_resp(client_socket), end="")
+    try:
+        send_cmd(client_socket, "TYPE I")
+        print(get_resp(client_socket), end="")
+    except:
+        print("Not connected.")
 
 def cd(dir):
-    if not dir:
-        dir = input("Remote directory ")
-    send_cmd(client_socket, f"CWD {dir}")
-    print(get_resp(client_socket), end="")
+        if not host:
+            print("Not connected.")
+            return
+        if not dir:
+            dir = input("Remote directory ")
+        send_cmd(client_socket, f"CWD {dir}")
+        print(get_resp(client_socket), end="")
 
 def rename(filename , new_filename = None):
-    if not filename:
-        filename = input("From name ")
-    if not new_filename:
-        new_filename = input("To name ")
-    send_cmd(client_socket, f"RNFR {filename}")
-    resp = get_resp(client_socket)
-    print(resp, end="")
-    if resp.split()[0] == '550':
-        return
-    send_cmd(client_socket, f"RNTO {new_filename}")
-    print(get_resp(client_socket), end="")
+        if not host:
+            print("Not connected.")
+            return
+        if not filename:
+            filename = input("From name ")
+        if not new_filename:
+            new_filename = input("To name ")
+        send_cmd(client_socket, f"RNFR {filename}")
+        resp = get_resp(client_socket)
+        print(resp, end="")
+        if resp.split()[0] == '550':
+            return
+        send_cmd(client_socket, f"RNTO {new_filename}")
+        print(get_resp(client_socket), end="")
+
 
 def delete(filename):
-    if not filename:
-        filename = input("Remote file ")
-    send_cmd(client_socket, f"DELE {filename}")
-    print(get_resp(client_socket), end="")
+        if not host:
+            print("Not connected.")
+            return
+        if not filename:
+            filename = input("Remote file ")
+        send_cmd(client_socket, f"DELE {filename}")
+        print(get_resp(client_socket), end="")
 
 def open_data_conn():
     global host
@@ -82,105 +98,114 @@ def send_data(data_sock, file):
     return len(data)
 
 def ls(dir):
-    data_sock = open_data_conn()
+    try:
+        data_sock = open_data_conn()
 
-    if dir == None:
-        dir = ""
-    send_cmd(client_socket, f"NLST {dir}")
-    resp = get_resp(client_socket)
-    print(resp, end="")
+        if dir == None:
+            dir = ""
+        send_cmd(client_socket, f"NLST {dir}")
+        resp = get_resp(client_socket)
+        print(resp, end="")
 
-    resp_code = resp.split()[0]
-    if resp_code == "550":
-        return
-    
-    start_time = time.time()
-    data, size = recv_data(data_sock)
-    data_sock.close()
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    size += 3
-    if elapsed_time == 0:
-        elapsed_time = 0.0001
-    speed = size / (elapsed_time * 1000)
-    status = f"ftp: {size} bytes received in {elapsed_time:.3f}Seconds {speed:.2f}Kbytes/sec."
+        resp_code = resp.split()[0]
+        if resp_code == "550":
+            return
+        
+        start_time = time.time()
+        data, size = recv_data(data_sock)
+        data_sock.close()
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        size += 3
+        if elapsed_time == 0:
+            elapsed_time = 0.0001
+        speed = size / (elapsed_time * 1000)
+        status = f"ftp: {size} bytes received in {elapsed_time:.2f}Seconds {speed:.2f}Kbytes/sec."
 
-    print(data, end="")
-    print(get_resp(client_socket), end="")
-    if size != 3:
-        print(status)
+        print(data, end="")
+        print(get_resp(client_socket), end="")
+        if size != 3:
+            print(status)
+    except:
+        print("Not connected.")
 
 def get(remote_file, local_file = None):
-    if not remote_file:
-        remote_file = input("Remote file ")
-        local_file = input("Local file ")
+        if not host:
+            print("Not connected.")
+            return
+        if not remote_file:
+            remote_file = input("Remote file ")
+            local_file = input("Local file ")
 
-    if not local_file or local_file == "":
-        local_file = remote_file
+        if not local_file or local_file == "":
+            local_file = remote_file
 
-    data_sock = open_data_conn()
-    send_cmd(client_socket, f"RETR {remote_file}")
-    resp = get_resp(client_socket)
+        data_sock = open_data_conn()
+        send_cmd(client_socket, f"RETR {remote_file}")
+        resp = get_resp(client_socket)
 
-    if resp.split()[0] == '550':
-        print(resp[:-2], end="")
-        return
-    
-    print(resp, end="")
+        if resp.split()[0] == '550':
+            print(resp[:-2], end="")
+            return
+        
+        print(resp, end="")
 
-    start_time = time.time()
-    data, size = recv_data(data_sock)
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    if elapsed_time == 0:
-        elapsed_time = 0.0001
-    speed = size / (elapsed_time * 1000)
-    status = f"ftp: {size} bytes received in {elapsed_time:.3f}Seconds {speed:.2f}Kbytes/sec."
+        start_time = time.time()
+        data, size = recv_data(data_sock)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        if elapsed_time == 0:
+            elapsed_time = 0.0001
+        speed = size / (elapsed_time * 1000)
+        status = f"ftp: {size} bytes received in {elapsed_time:.2f}Seconds {speed:.2f}Kbytes/sec."
 
-    f = open(local_file, "w")
-    f.write(data)
-    f.close()
-    data_sock.close()
-    print(get_resp(client_socket), end="")
-    if size != 0:
-        print(status)
+        f = open(local_file, "w")
+        f.write(data)
+        f.close()
+        data_sock.close()
+        print(get_resp(client_socket), end="")
+        if size != 0:
+            print(status)
 
 def put(local_file, remote_file = None):
-    if not local_file:
-        local_file = input("Remote file ")
-        remote_file = input("Local file ")
+        if not host:
+            print("Not connected.")
+            return
+        if not local_file:
+            local_file = input("Remote file ")
+            remote_file = input("Local file ")
 
-    if not remote_file or remote_file == "":
-        remote_file = local_file
+        if not remote_file or remote_file == "":
+            remote_file = local_file
 
-    try:
-        f = open(local_file, "r")
-    except FileNotFoundError:
-        print(f"{local_file}: File not found")
-        return
-    except IOError:
-        print(f"Error opening local file {local_file}")
-        return
+        try:
+            f = open(local_file, "r")
+        except FileNotFoundError:
+            print(f"{local_file}: File not found")
+            return
+        except IOError:
+            print(f"Error opening local file {local_file}")
+            return
 
-    data_sock = open_data_conn()
-    send_cmd(client_socket, f"STOR {local_file}")
-    print(get_resp(client_socket), end="")
+        data_sock = open_data_conn()
+        send_cmd(client_socket, f"STOR {local_file}")
+        print(get_resp(client_socket), end="")
 
-    start_time = time.time()
-    size = send_data(data_sock, f)
-    end_time = time.time()
+        start_time = time.time()
+        size = send_data(data_sock, f)
+        end_time = time.time()
 
-    f.close()
-    data_sock.close()
-    elapsed_time = end_time - start_time
-    if elapsed_time == 0:
-        elapsed_time = 0.0001
-    speed = size / (elapsed_time * 1000)
-    status = f"ftp: {size} bytes received in {elapsed_time:.3f}Seconds {speed:.2f}Kbytes/sec."
+        f.close()
+        data_sock.close()
+        elapsed_time = end_time - start_time
+        if elapsed_time == 0:
+            elapsed_time = 0.0001
+        speed = size / (elapsed_time * 1000)
+        status = f"ftp: {size} bytes received in {elapsed_time:.2f}Seconds {speed:.2f}Kbytes/sec."
 
-    print(get_resp(client_socket), end="")
-    if size != 0:
-        print(status)
+        print(get_resp(client_socket), end="")
+        if size != 0:
+            print(status)
 
 def ftp_open(ip = None, port = 21):
     global client_socket
@@ -308,6 +333,8 @@ def user(username):
 while True:
     line = input('ftp> ').strip()
     args = line.split()
+    if args == []:
+        continue
     
     command = args[0]
     if len(args) > 1:
@@ -362,5 +389,5 @@ while True:
     elif command == 'user':
         user(*option)
 
-    else:
+    elif option[0] == None:
         print("Invalid command.")
